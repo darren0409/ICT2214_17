@@ -53,6 +53,7 @@ var defOpts = map[string]map[string]interface{}{
 				"forum.php",
 				"wp-login",
 				"forum",
+				"login.php",
 			},
 		},
 		"uagent_string_blacklist": []string{

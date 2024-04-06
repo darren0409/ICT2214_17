@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	// "time"
+
 	"github.com/fasthttp/router"
 	"github.com/rs/zerolog"
 	"github.com/valyala/fasthttp"
@@ -66,6 +68,7 @@ func hellPot(ctx *fasthttp.RequestCtx) {
 	fmt.Print(reqUrlString + "\n")
 	ctx.SetContentType("text/html")
 
+	//TODO The form method for the below 2 html forms.
 	if reqUrlString == "/wp-login" {
 		ctx.SetBodyString(`
 	<!DOCTYPE html>
@@ -135,7 +138,7 @@ func hellPot(ctx *fasthttp.RequestCtx) {
     <div class="content">
         <div class="login-container">
             <h2>Login</h2>
-            <form action="/wp-login" method="get">
+            <form action="/login.php" method="post">
                 <label for="username">Username:</label>
                 <input type="text" id="username" name="username" required><br>
                 <label for="password">Password:</label>
@@ -241,7 +244,7 @@ func hellPot(ctx *fasthttp.RequestCtx) {
 	<div style="color: red;">You need to be logged in to post.</div>
         <div class="form-container">
             <h2>Create a New Post</h2>
-            <form action="/forum.php" method="get">
+            <form action="/wp-login.php" method="POST">
                 <label for="postTitle">Title:</label>
                 <input type="text" id="postTitle" name="postTitle" required><br>
                 <label for="postContent">Content:</label>
@@ -272,6 +275,12 @@ func hellPot(ctx *fasthttp.RequestCtx) {
 </html>
 		`)
 	}
+
+	if reqUrlString == "/login.php" {
+		print("hello")
+		err := ctx.Request.PostArgs()
+		print(err)
+	}
 }
 
 func getSrv(r *router.Router) fasthttp.Server {
@@ -299,7 +308,8 @@ func getSrv(r *router.Router) fasthttp.Server {
 		Concurrency:        config.MaxWorkers,
 
 		// only accept GET requests
-		GetOnly: true,
+		// TODO This already set to false but not working
+		GetOnly: false,
 
 		// we don't care if a request ends up being handled by a different handler (in fact it probably will)
 		KeepHijackedConns: true,
