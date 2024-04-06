@@ -9,6 +9,9 @@ import (
 	"github.com/yunginnanet/HellPot/internal/config"
 )
 
+var logMessageChannel = make(chan map[string]interface{})
+var null = map[string]interface{}{}
+
 func robotsTXT(ctx *fasthttp.RequestCtx) {
 	slog := log.With().
 		Str("USERAGENT", string(ctx.UserAgent())).
@@ -30,4 +33,14 @@ func robotsTXT(ctx *fasthttp.RequestCtx) {
 	if _, err := fmt.Fprintf(ctx, paths.String()); err != nil {
 		slog.Error().Err(err).Msg("SERVE_ROBOTS_ERROR")
 	}
+
+	// Construct log message with relevant information
+	logMessage := map[string]interface{}{
+		"Event":      "New request",
+		"User Agent": string(ctx.UserAgent()),
+		"IP address": getRealRemote(ctx),
+		"URL":        string(ctx.RequestURI()),
+	}
+	logMessageChannel <- null
+	logMessageChannel <- logMessage
 }

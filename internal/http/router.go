@@ -7,17 +7,20 @@ import (
 	"strings"
 	"time"
 
-	// "time"
-
 	"github.com/fasthttp/router"
 	"github.com/rs/zerolog"
 	"github.com/valyala/fasthttp"
 
 	// "github.com/yunginnanet/HellPot/heffalump"
+	"github.com/gorilla/websocket"
 	"github.com/yunginnanet/HellPot/internal/config"
 )
 
 var log *zerolog.Logger
+
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool { return true },
+}
 
 func getRealRemote(ctx *fasthttp.RequestCtx) string {
 	xrealip := string(ctx.Request.Header.Peek(config.HeaderName))
@@ -49,6 +52,15 @@ func hellPot(ctx *fasthttp.RequestCtx) {
 			return
 		}
 	}
+
+	logMessage := map[string]interface{}{
+		"Event":      "New request",
+		"User Agent": string(ctx.UserAgent()),
+		"IP address": getRealRemote(ctx),
+		"URL":        string(ctx.RequestURI()),
+	}
+	logMessageChannel <- null
+	logMessageChannel <- logMessage
 
 	if config.Trace {
 		slog = slog.With().Str("caller", path).Logger()
@@ -349,6 +361,11 @@ func Serve() error {
 
 	//goland:noinspection GoBoolExpressions
 	if !config.UseUnixSocket || runtime.GOOS == "windows" {
+		http.HandleFunc("/ws", handleWebSocketConnection)
+		go func() {
+			http.ListenAndServe(":8000", nil)
+			log.Println("Starting server")
+		}()
 		log.Info().Str("caller", l).Msg("Listening and serving HTTP Pies...")
 		return srv.ListenAndServe(l)
 	}
@@ -359,4 +376,26 @@ func Serve() error {
 
 	log.Info().Str("caller", config.UnixSocketPath).Msg("Listening and serving HTTP...")
 	return listenOnUnixSocket(config.UnixSocketPath, r)
+}
+
+func handleWebSocketConnection(w http.ResponseWriter, r *http.Request) {
+	ws, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Println("Error upgrading to WebSocket:", err)
+		return
+	}
+	log.Println("Websocket Connected")
+	defer ws.Close()
+
+	// Handle incoming messages from the WebSocket connection
+	for {
+		logMessage := <-logMessageChannel
+		log.Println(logMessage)
+		//Send the message to the client
+		err := ws.WriteJSON(map[string]interface{}{"logMessage": logMessage})
+		if err != nil {
+			log.Println(err)
+			return
+		}
+	}
 }
