@@ -50,7 +50,9 @@ var defOpts = map[string]map[string]interface{}{
 			"makerobots": true,
 			"paths": []string{
 				"wp-login.php",
+				"forum.php",
 				"wp-login",
+				"forum",
 			},
 		},
 		"uagent_string_blacklist": []string{

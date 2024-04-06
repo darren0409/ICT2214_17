@@ -1,7 +1,6 @@
 package http
 
 import (
-	"bufio"
 	"fmt"
 	"net/http"
 	"runtime"
@@ -12,7 +11,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/valyala/fasthttp"
 
-	"github.com/yunginnanet/HellPot/heffalump"
+	// "github.com/yunginnanet/HellPot/heffalump"
 	"github.com/yunginnanet/HellPot/internal/config"
 )
 
@@ -24,9 +23,11 @@ func getRealRemote(ctx *fasthttp.RequestCtx) string {
 		return xrealip
 	}
 	return ctx.RemoteIP().String()
+
 }
 
 func hellPot(ctx *fasthttp.RequestCtx) {
+	fmt.Print("hellpot is called!\n")
 	path, pok := ctx.UserValue("path").(string)
 	if len(path) < 1 || !pok {
 		path = "/"
@@ -42,7 +43,7 @@ func hellPot(ctx *fasthttp.RequestCtx) {
 	for _, denied := range config.UseragentBlacklistMatchers {
 		if strings.Contains(string(ctx.UserAgent()), denied) {
 			slog.Trace().Msg("Ignoring useragent")
-			ctx.Error("Not found", http.StatusNotFound)
+			ctx.Error("Not founds", http.StatusNotFound)
 			return
 		}
 	}
@@ -53,28 +54,224 @@ func hellPot(ctx *fasthttp.RequestCtx) {
 
 	slog.Info().Msg("NEW")
 
-	s := time.Now()
-	var n int64
+	// Get Request url and remove any get parameters that are appended.
+	reqUrl := ctx.RequestURI()
+	reqUrlString := string(reqUrl[:])
+	fmt.Print(reqUrlString + "\n")
+	index := strings.Index(reqUrlString, "?")
+	// If there actually is a ? in the url
+	if index != -1 {
+		reqUrlString = reqUrlString[:index]
+	}
+	fmt.Print(reqUrlString + "\n")
+	ctx.SetContentType("text/html")
 
-	ctx.SetBodyStreamWriter(func(bw *bufio.Writer) {
-		var err error
-		var wn int64
-
-		for {
-			wn, err = heffalump.DefaultHeffalump.WriteHell(bw)
-			n += wn
-			if err != nil {
-				slog.Trace().Err(err).Msg("END_ON_ERR")
-				break
-			}
-		}
-
-		slog.Info().
-			Int64("BYTES", n).
-			Dur("DURATION", time.Since(s)).
-			Msg("FINISH")
-	})
-
+	if reqUrlString == "/wp-login" {
+		ctx.SetBodyString(`
+	<!DOCTYPE html>
+<html>
+<head>
+    <title>Login Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f1f1f1;
+        }
+        .navbar {
+            background-color: #333;
+            overflow: hidden;
+        }
+        .navbar a {
+            float: left;
+            display: block;
+            color: white;
+            text-align: center;
+            padding: 14px 20px;
+            text-decoration: none;
+        }
+        .navbar a:hover {
+            background-color: #ddd;
+            color: black;
+        }
+        .content {
+            padding: 20px;
+        }
+        .login-container {
+            width: 300px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        input[type="text"],
+        input[type="password"],
+        input[type="submit"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        input[type="submit"] {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        input[type="submit"]:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <a href="/wp-login.php">Home</a>
+        <a href="/forum.php">Forum</a>
+    </div>
+    <div class="content">
+        <div class="login-container">
+            <h2>Login</h2>
+            <form action="/wp-login" method="get">
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username" required><br>
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" required><br>
+                <input type="submit" value="Login">
+            </form>
+        </div>
+    </div>
+</body>
+</html>
+	`)
+	}
+	if reqUrlString == "/forum.php" {
+		ctx.SetBodyString(
+			`
+		<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Forum</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f1f1f1;
+        }
+        .navbar {
+            background-color: #333;
+            overflow: hidden;
+        }
+        .navbar a {
+            float: left;
+            display: block;
+            color: white;
+            text-align: center;
+            padding: 14px 20px;
+            text-decoration: none;
+        }
+        .navbar a:hover {
+            background-color: #ddd;
+            color: black;
+        }
+        .content {
+            padding: 20px;
+        }
+        .post {
+            background-color: #fff;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .post-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .post-content {
+            font-size: 16px;
+        }
+        .post-footer {
+            font-size: 14px;
+            color: #666;
+            margin-top: 10px;
+        }
+        .form-container {
+            background-color: #fff;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        input[type="text"],
+        textarea,
+        input[type="submit"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        textarea {
+            height: 100px;
+        }
+        input[type="submit"] {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        input[type="submit"]:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <a href="/wp-login">Home</a>
+        <a href="/forum.php">Forum</a>
+    </div>
+    <div class="content">
+	<div style="color: red;">You need to be logged in to post.</div>
+        <div class="form-container">
+            <h2>Create a New Post</h2>
+            <form action="/forum.php" method="get">
+                <label for="postTitle">Title:</label>
+                <input type="text" id="postTitle" name="postTitle" required><br>
+                <label for="postContent">Content:</label>
+                <textarea id="postContent" name="postContent" required></textarea><br>
+                <input type="submit" value="Submit">
+            </form>
+        </div>
+        <div class="post">
+            <div class="post-title">First Post</div>
+            <div class="post-content">
+                This is the content of the first post in the forum. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla euismod justo nec orci blandit, at venenatis justo volutpat.
+            </div>
+            <div class="post-footer">
+                Posted by John Doe on 2022-04-06
+            </div>
+        </div>
+        <div class="post">
+            <div class="post-title">Second Post</div>
+            <div class="post-content">
+                This is the content of the second post in the forum. Sed quis leo ullamcorper, fringilla metus vel, finibus justo. Integer condimentum vestibulum sem, vel volutpat libero ultricies nec.
+            </div>
+            <div class="post-footer">
+                Posted by Jane Smith on 2022-04-07
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+		`)
+	}
 }
 
 func getSrv(r *router.Router) fasthttp.Server {
@@ -142,7 +339,7 @@ func Serve() error {
 
 	//goland:noinspection GoBoolExpressions
 	if !config.UseUnixSocket || runtime.GOOS == "windows" {
-		log.Info().Str("caller", l).Msg("Listening and serving HTTP...")
+		log.Info().Str("caller", l).Msg("Listening and serving HTTP Pies...")
 		return srv.ListenAndServe(l)
 	}
 
