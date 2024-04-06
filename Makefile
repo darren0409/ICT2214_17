@@ -4,8 +4,10 @@ format:
 check:
 	go vet ./...
 run:
-	go run cmd/HellPot/*.go
+	go run cmd/HellPot/HellPot.go
 deps:
 	go mod tidy -v
 build:
-	go build -trimpath -ldflags "-s -w -X main.version=`git tag --sort=-version:refname | head -n 1`" cmd/HellPot/*.go
+	go build -ldflags="-s -w -X main.version=$(shell git describe --tags --abbrev=0)" -o HellPot cmd/HellPot/HellPot.go
+
+
